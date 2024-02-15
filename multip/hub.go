@@ -4,6 +4,8 @@
 
 package main
 
+import "fmt"
+
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
 type Hub struct {
@@ -15,7 +17,7 @@ type Hub struct {
 	broadcast chan []byte
 
 	// Register requests from the clients.
-	register chan *Client
+	//register chan *Client
 
 	// Unregister requests from clients.
 	unregister chan *Client
@@ -23,9 +25,9 @@ type Hub struct {
 
 func newHub(roomID string) *Hub {
 	return &Hub{
-		roomID:     roomID,
-		broadcast:  make(chan []byte),
-		register:   make(chan *Client),
+		roomID:    roomID,
+		broadcast: make(chan []byte),
+		//register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
 	}
@@ -33,23 +35,27 @@ func newHub(roomID string) *Hub {
 
 func (h *Hub) run() {
 	defer func() {
-		close(h.register)
+		//close(h.register)
 		close(h.broadcast)
 		close(h.unregister)
 	}()
 	for {
 		select {
-		case client := <-h.register:
-			h.clients[client] = true
+		//case client := <-h.register:
+		//	h.clients[client] = true
 		case client := <-h.unregister:
+			mutex.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
 			}
 			if len(h.clients) == 0 {
+				fmt.Println("Delete Room", h.roomID)
 				delete(house, h.roomID)
+				mutex.Unlock()
 				return
 			}
+			mutex.Unlock()
 		case message := <-h.broadcast:
 			for client := range h.clients {
 				select {

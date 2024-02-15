@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -30,6 +31,7 @@ const (
 var (
 	newline = []byte{'\n'}
 	space   = []byte{' '}
+	mutex   sync.Mutex
 )
 
 var upgrader = websocket.Upgrader{
@@ -128,7 +130,9 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
-	client.hub.register <- client
+	//client.hub.register <- client
+	client.hub.clients[client] = true
+	mutex.Unlock()
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.

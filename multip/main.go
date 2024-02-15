@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -30,13 +31,21 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/{room}", serveHome)
 	r.HandleFunc("/ws/{room}", func(writer http.ResponseWriter, request *http.Request) {
-		var hub *Hub
 		vars := mux.Vars(request)
 		roomID := vars["room"]
+
+		mutex.Lock()
 		room, ok := house[roomID]
+
+		//fmt.Println("Sleep 10 seconds")
+		//time.Sleep(time.Second * 10)
+
+		var hub *Hub
 		if ok {
+			fmt.Println("Found room")
 			hub = room
 		} else {
+			fmt.Println("Create room")
 			hub = newHub(roomID)
 			house[roomID] = hub
 			go hub.run()
