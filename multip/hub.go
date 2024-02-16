@@ -44,18 +44,21 @@ func (h *Hub) run() {
 		//case client := <-h.register:
 		//	h.clients[client] = true
 		case client := <-h.unregister:
-			mutex.Lock()
+			//roomMutexes[h.roomID].Lock()
+			roomMutex := roomMutexes[h.roomID]
+			roomMutex.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
 			}
 			if len(h.clients) == 0 {
 				fmt.Println("Delete Room", h.roomID)
-				delete(house, h.roomID)
-				mutex.Unlock()
+				//delete(house, h.roomID)
+				house.Delete(h.roomID)
+				roomMutexes[h.roomID].Unlock()
 				return
 			}
-			mutex.Unlock()
+			roomMutexes[h.roomID].Unlock()
 		case message := <-h.broadcast:
 			for client := range h.clients {
 				select {

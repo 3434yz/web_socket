@@ -9,13 +9,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
-var house = make(map[string]*Hub)
+
+// var house = make(map[string]*Hub)
+var house sync.Map
+var roomMutexes = make(map[string]*sync.Mutex)
+var mutexForRoomMutexes = new(sync.Mutex)
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
@@ -34,20 +39,30 @@ func main() {
 		vars := mux.Vars(request)
 		roomID := vars["room"]
 
-		mutex.Lock()
-		room, ok := house[roomID]
+		mutexForRoomMutexes.Lock()
+		roomMutex, ok := roomMutexes[roomID]
+		if ok {
+			roomMutex.Lock()
+		} else {
+			roomMutexes[roomID] = new(sync.Mutex)
+			roomMutexes[roomID].Lock()
+		}
+		mutexForRoomMutexes.Unlock()
 
+		//room, ok := house[roomID]
+		room, ok := house.Load(roomID)
 		//fmt.Println("Sleep 10 seconds")
 		//time.Sleep(time.Second * 10)
 
 		var hub *Hub
 		if ok {
 			fmt.Println("Found room")
-			hub = room
+			hub = room.(*Hub)
 		} else {
 			fmt.Println("Create room")
 			hub = newHub(roomID)
-			house[roomID] = hub
+			//house[roomID] = hub
+			house.Store(roomID, hub)
 			go hub.run()
 		}
 		serveWs(hub, writer, request)
