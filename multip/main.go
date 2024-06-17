@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"runtime"
 	"sync"
 	"time"
 
@@ -86,6 +89,13 @@ func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			fmt.Println("当前协程数量", runtime.NumGoroutine())
+		}
+	}()
+
 	flag.Parse()
 	r := mux.NewRouter()
 	r.HandleFunc("/{room}", serveHome)
@@ -96,5 +106,12 @@ func main() {
 		ReadHeaderTimeout: 3 * time.Second,
 		Handler:           r,
 	}
-	panic(server.ListenAndServe())
+
+	go func() {
+		server.ListenAndServe()
+	}()
+
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	<-signalChan
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 var done chan interface{}
 var interrupt chan os.Signal
+var socketUrl = "ws://localhost:8080/ws"
 
 func receiveHandler(connection *websocket.Conn) {
 	defer close(done)
@@ -30,16 +32,15 @@ func main() {
 
 	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
 
-	socketUrl := "ws://localhost:8080" + "/socket"
-	conn, _, err := websocket.DefaultDialer.Dial(socketUrl, nil)
+	req, _ := http.NewRequest(http.MethodGet, socketUrl, nil)
+	req.Header.Add("id", "123")
+	conn, _, err := websocket.DefaultDialer.Dial(socketUrl, req.Header)
 	if err != nil {
 		log.Fatal("Error connecting to Websocket Server:", err)
 	}
 	defer conn.Close()
 	go receiveHandler(conn)
 
-	// Our main loop for the client
-	// We send our relevant packets here
 	for {
 		select {
 		case <-time.After(time.Duration(1) * time.Millisecond * 1000):
